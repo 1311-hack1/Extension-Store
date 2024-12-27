@@ -37,8 +37,15 @@ jobs:
               if (line.startsWith('**Tags:**')) extension.tags = line.replace('**Tags:**', '').trim();
             });
 
+            // Get comments from the issue
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number
+            });
+
             // Find ZIP attachment
-            const attachments = [...context.payload.issue.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || []];
+            const attachments = [...body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || []];
             comments.data.forEach(comment => {
               const urls = comment.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || [];
               attachments.push(...urls);
