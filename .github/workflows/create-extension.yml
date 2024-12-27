@@ -166,13 +166,14 @@ jobs:
         run: |
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
-          # Generate URLs using GitHub API format
+          # Generate URLs using raw GitHub format
           REPO="${{ github.repository }}"
           BRANCH="main"
           PATH_PREFIX="extensions/${SAFE_NAME}"
           
-          DOWNLOAD_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/${SAFE_NAME}.crx?ref=${BRANCH}"
-          ICON_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/icon.png?ref=${BRANCH}"
+          # Use raw.githubusercontent.com URLs
+          DOWNLOAD_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/${PATH_PREFIX}/${SAFE_NAME}.crx"
+          ICON_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/${PATH_PREFIX}/icon.png"
           GITHUB_URL="https://github.com/${REPO}/tree/${BRANCH}/${PATH_PREFIX}"
 
           # Initialize extensions.json if it doesn't exist
