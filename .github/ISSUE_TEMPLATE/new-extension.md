@@ -15,10 +15,6 @@ Please fill out the following information:
 
 **Author:** 
 
-**Download URL:** 
-
-**GitHub URL:** 
-
 **Icon URL:** 
 
 **Tags** (comma-separated): 
