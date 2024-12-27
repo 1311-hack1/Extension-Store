@@ -11,25 +11,22 @@ function App() {
 
   const fetchExtensions = async () => {
     try {
-      // First try loading from local public folder during development
-      const response = await fetch('/extensions.json');
+      // Fetch from GitHub repository
+      const response = await fetch('https://raw.githubusercontent.com/1311-hack1/Extension-Store/main/extensions.json');
       console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch extensions');
+      }
+      
       const data = await response.json();
       console.log('Fetched data:', data);
       setExtensions(data.extensions);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching extensions:', error);
-      try {
-        // Fallback to loading from dist folder
-        const response = await fetch(chrome.runtime.getURL('extensions.json'));
-        console.log('Fallback response status:', response.status);
-        const data = await response.json();
-        console.log('Fallback data:', data);
-        setExtensions(data.extensions);
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-      }
+      // Fallback to empty array if fetch fails
+      setExtensions([]);
       setLoading(false);
     }
   };
@@ -41,6 +38,8 @@ function App() {
       </header>
       {loading ? (
         <div className="text-center p-5 text-gray-600">Loading...</div>
+      ) : extensions.length === 0 ? (
+        <div className="text-center p-5 text-gray-600">No extensions found</div>
       ) : (
         <ExtensionList extensions={extensions} />
       )}

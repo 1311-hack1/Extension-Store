@@ -10,11 +10,10 @@
   "permissions": [
     "downloads"
   ],
-  "web_accessible_resources": [{
-    "resources": ["extensions.json"],
-    "matches": ["<all_urls>"]
-  }],
+  "host_permissions": [
+    "https://raw.githubusercontent.com/*"
+  ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://raw.githubusercontent.com;"
   }
 } 
