@@ -128,10 +128,10 @@ jobs:
           # Generate safe name for URLs
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
-          # Generate URLs based on our repository and new directory structure
-          DOWNLOAD_URL="https://raw.githubusercontent.com/${{ github.repository }}/raw/refs/heads/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
-          ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/blob/main/extensions/${SAFE_NAME}/icon.png"
-          GITHUB_URL="https://github.com/${{ github.repository }}/blob/main/extensions/${SAFE_NAME}/"
+          # Generate correct raw URLs for GitHub
+          DOWNLOAD_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/icon.png"
+          GITHUB_URL="https://github.com/${{ github.repository }}/tree/main/extensions/${SAFE_NAME}"
 
           # Initialize extensions.json if it doesn't exist
           if [ ! -f extensions.json ]; then
