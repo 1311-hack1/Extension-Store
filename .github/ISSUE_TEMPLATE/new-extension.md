@@ -1,8 +1,8 @@
 ---
-Name: New Extension Submission
-Description: Submit a new extension to the store
-Title: 'Extension Name'
-Labels: new-extension
+name: New Extension Submission
+about: Submit a new extension to the store
+title: "[New Extension] "
+labels: new-extension
 ---
 
 Please fill out the following information:
