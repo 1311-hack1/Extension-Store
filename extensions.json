@@ -94,6 +94,21 @@
       ],
       "created_at": "2024-12-27T11:24:32Z",
       "updated_at": "2024-12-27T11:24:32Z"
+    },
+    {
+      "id": "7",
+      "name": "New Ext",
+      "description": "New Ext",
+      "version": "21.46.8088",
+      "author": "New Ext",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/new-ext/new-ext.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/new-ext/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/new-ext",
+      "tags": [
+        "New Ext"
+      ],
+      "created_at": "2024-12-27T11:25:25Z",
+      "updated_at": "2024-12-27T11:25:25Z"
     }
   ]
 }
