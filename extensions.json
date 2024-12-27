@@ -63,6 +63,22 @@
       ],
       "created_at": "2024-12-27T11:23:52Z",
       "updated_at": "2024-12-27T11:23:52Z"
+    },
+    {
+      "id": "5",
+      "name": "Test Extension",
+      "description": "Testing the Wootzapp Extension Store",
+      "version": "127.155.800548",
+      "author": "Sagar",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/test-extension/test-extension.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/test-extension/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/test-extension",
+      "tags": [
+        "test",
+        "ext"
+      ],
+      "created_at": "2024-12-27T11:24:06Z",
+      "updated_at": "2024-12-27T11:24:06Z"
     }
   ]
 }
