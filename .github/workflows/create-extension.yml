@@ -1,0 +1,66 @@
+name: Create Extension
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  process-extension:
+    if: contains(github.event.issue.labels.*.name, 'new-extension')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Parse Issue Body
+        id: parse
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const body = context.payload.issue.body;
+            // Parse the issue body to extract extension details
+            const lines = body.split('\n');
+            const extension = {};
+            
+            lines.forEach(line => {
+              if (line.startsWith('Name:')) extension.name = line.replace('Name:', '').trim();
+              if (line.startsWith('Description:')) extension.description = line.replace('Description:', '').trim();
+              if (line.startsWith('Version:')) extension.version = line.replace('Version:', '').trim();
+              if (line.startsWith('Download URL:')) extension.download_url = line.replace('Download URL:', '').trim();
+              // Add more fields as needed
+            });
+
+            return extension;
+
+      - name: Update Extensions JSON
+        run: |
+          # Read current extensions.json
+          content=$(cat extensions.json)
+          
+          # Add new extension to the JSON
+          # Using jq to modify the JSON file
+          jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
+             --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
+             --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \
+             --arg url "${{ fromJSON(steps.parse.outputs.result).download_url }}" \
+             '.extensions += [{
+                "id": ((.extensions | length) + 1 | tostring),
+                "name": $name,
+                "description": $desc,
+                "version": $ver,
+                "download_url": $url,
+                "created_at": (now | todate),
+                "updated_at": (now | todate)
+              }]' extensions.json > temp.json && mv temp.json extensions.json
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add extensions.json
+          git commit -m "Add new extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
+          git push 
