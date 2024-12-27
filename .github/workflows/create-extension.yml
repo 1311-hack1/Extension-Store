@@ -80,7 +80,7 @@ jobs:
           mkdir -p temp
           cd temp
           
-          # Get extension name for directory
+          # Get extension name and create safe name
           EXTENSION_NAME="${{ fromJSON(steps.parse.outputs.result).name }}"
           if [ -z "$EXTENSION_NAME" ]; then
             echo "Extension name not found in issue"
@@ -89,7 +89,12 @@ jobs:
           
           # Generate safe name for directory
           SAFE_NAME=$(echo "$EXTENSION_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
-          echo "Creating extension directory: $SAFE_NAME"
+          echo "Extension name: $EXTENSION_NAME"
+          echo "Safe name for directory: $SAFE_NAME"
+          
+          # Create extension directory early
+          mkdir -p "../extensions/${SAFE_NAME}"
+          echo "Created directory: ../extensions/${SAFE_NAME}"
           
           # Download and extract ZIP
           ZIP_URL="${{ fromJSON(steps.parse.outputs.result).zip_url }}"
@@ -145,10 +150,17 @@ jobs:
           
           echo "Current directory contents:"
           ls -la
+          echo "Parent directory contents:"
+          ls -la ..
+          echo "Extensions directory contents:"
+          ls -la ../extensions/
           
-          if [ -d "artifact" ]; then
-            cd artifact
-            echo "Entered artifact directory. Contents:"
+          # Find extracted directory (could be any name)
+          EXTRACTED_DIR=$(find . -type d -mindepth 1 -maxdepth 1 | head -n 1)
+          if [ -n "$EXTRACTED_DIR" ]; then
+            cd "$EXTRACTED_DIR"
+            echo "Entered extracted directory: $EXTRACTED_DIR"
+            echo "Contents:"
             ls -la
           fi
           
@@ -174,15 +186,21 @@ jobs:
             exit 1
           fi
           
-          # Create directory with extension name
-          mkdir -p "../../extensions/${SAFE_NAME}"
+          echo "Found files:"
+          echo "CRX: $CRX_FILE"
+          echo "Icon: $ICON_FILE"
           
-          # Move files to final location
-          cp "$CRX_FILE" "../../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
-          cp "$ICON_FILE" "../../extensions/${SAFE_NAME}/icon.png"
+          # Copy files to final location
+          echo "Copying files to: ../extensions/${SAFE_NAME}/"
+          cp "$CRX_FILE" "../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          cp "$ICON_FILE" "../extensions/${SAFE_NAME}/icon.png"
+          
+          # Verify files were copied
+          echo "Final extension directory contents:"
+          ls -la "../extensions/${SAFE_NAME}/"
           
           # Clean up
-          cd ../..
+          cd ..
           rm -rf temp
 
       - name: Update Extensions JSON
