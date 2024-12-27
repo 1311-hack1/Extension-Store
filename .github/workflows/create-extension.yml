@@ -1,4 +1,4 @@
-name: Create Extension
+name: Create or Update Extension
 
 on:
   issues:
@@ -47,7 +47,7 @@ jobs:
             // Debug logs
             console.log('Parsed extension data:', extension);
             
-            // Find ZIP attachment with multiple possible patterns
+            // Find ZIP attachment
             const attachmentPatterns = [
               /https:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g,
               /https:\/\/github\.com\/[^\s)]+\/files\/[^\s)]+\.zip/g
@@ -59,14 +59,12 @@ jobs:
               attachments.push(...matches);
             });
             
-            // Extract file ID from GitHub attachment URL
             const zipFile = attachments[0];
             if (!zipFile) {
               console.log('No ZIP file found in attachments');
-              throw new Error('Missing required ZIP file containing .crx and icon. Please attach a ZIP file containing your extension.crx and icon.png files.');
+              throw new Error('Missing required ZIP file containing .crx and icon.');
             }
 
-            // Convert GitHub attachment URL to raw download URL if needed
             let downloadUrl = zipFile;
             if (zipFile.includes('github.com')) {
               const fileId = zipFile.match(/\/files\/(\d+)\//)[1];
@@ -74,7 +72,6 @@ jobs:
             }
 
             extension.zip_url = downloadUrl;
-            console.log('Final extension data:', extension);
             return extension;
 
       - name: Download and Process ZIP
@@ -92,7 +89,7 @@ jobs:
             cd artifact
           fi
           
-          # Check for files with different possible names
+          # Check for files
           CRX_FILE=$(find . -name "*.crx" -o -name "build.crx" | head -n 1)
           ICON_FILE=$(find . -name "icon*.png" -o -name "*.png" | head -n 1)
           
@@ -101,9 +98,11 @@ jobs:
             exit 1
           fi
           
-          # Move files to final location with correct names
+          # Generate safe name and prepare directory
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           mkdir -p "../../extensions/${SAFE_NAME}"
+          
+          # Move files to final location
           cp "$CRX_FILE" "../../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
           cp "$ICON_FILE" "../../extensions/${SAFE_NAME}/icon.png"
           
@@ -113,7 +112,6 @@ jobs:
 
       - name: Update Extensions JSON
         run: |
-          # Generate safe name for URLs
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
           # Generate URLs using GitHub API format
@@ -121,7 +119,6 @@ jobs:
           BRANCH="main"
           PATH_PREFIX="extensions/${SAFE_NAME}"
           
-          # Generate API URLs for assets
           DOWNLOAD_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/${SAFE_NAME}.crx?ref=${BRANCH}"
           ICON_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/icon.png?ref=${BRANCH}"
           GITHUB_URL="https://github.com/${REPO}/tree/${BRANCH}/${PATH_PREFIX}"
@@ -134,6 +131,7 @@ jobs:
           # Convert tags array to JSON string
           TAGS_JSON=$(echo '${{ toJSON(fromJSON(steps.parse.outputs.result).tags) }}')
 
+          # Update existing entry or add new one
           jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
              --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
              --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \
@@ -142,19 +140,43 @@ jobs:
              --arg icon "$ICON_URL" \
              --arg github "$GITHUB_URL" \
              --argjson tags "$TAGS_JSON" \
-             '.extensions += [{
-                "id": ((.extensions | length) + 1 | tostring),
-                "name": $name,
-                "description": $desc,
-                "version": $ver,
-                "author": $author,
-                "download_url": $download,
-                "icon_url": $icon,
-                "github_url": $github,
-                "tags": $tags,
-                "created_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
-                "updated_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
-              }]' extensions.json > temp.json && mv temp.json extensions.json
+             --arg now "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+             '
+             def update_extension:
+               if .name == $name then
+                 . + {
+                   "description": $desc,
+                   "version": $ver,
+                   "author": $author,
+                   "download_url": $download,
+                   "icon_url": $icon,
+                   "github_url": $github,
+                   "tags": $tags,
+                   "updated_at": $now
+                 }
+               else
+                 .
+               end;
+             
+             if (.extensions | map(.name == $name) | any)
+             then
+               .extensions |= map(update_extension)
+             else
+               .extensions += [{
+                 "id": ((.extensions | length) + 1 | tostring),
+                 "name": $name,
+                 "description": $desc,
+                 "version": $ver,
+                 "author": $author,
+                 "download_url": $download,
+                 "icon_url": $icon,
+                 "github_url": $github,
+                 "tags": $tags,
+                 "created_at": $now,
+                 "updated_at": $now
+               }]
+             end
+             ' extensions.json > temp.json && mv temp.json extensions.json
 
       - name: Commit and Push Changes
         run: |
@@ -162,7 +184,7 @@ jobs:
           git config --local user.name "GitHub Action"
           git add extensions/
           git add extensions.json
-          git commit -m "Add new extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
+          git commit -m "Update extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
           git push
 
       - name: Comment on Issue
@@ -173,5 +195,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number,
-              body: `Extension has been successfully added!\n\nDownload URL: ${process.env.DOWNLOAD_URL}\nIcon URL: ${process.env.ICON_URL}\nGitHub URL: ${process.env.GITHUB_URL}`
+              body: `Extension has been successfully ${context.payload.action === 'opened' ? 'added' : 'updated'}!\n\nDownload URL: ${process.env.DOWNLOAD_URL}\nIcon URL: ${process.env.ICON_URL}\nGitHub URL: ${process.env.GITHUB_URL}`
             }); 
