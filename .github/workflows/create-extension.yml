@@ -81,9 +81,9 @@ jobs:
             # Direct download for user-images URLs
             wget -O package.zip "$ZIP_URL"
           else
-            # For GitHub attachment URLs, use the raw download URL
-            FILE_ID=$(echo "$ZIP_URL" | grep -o '/files/[0-9]\+/' | grep -o '[0-9]\+')
-            RAW_URL="https://github.com/1311-hack1/Extension-Store/files/$FILE_ID/artifact.zip"
+            # For GitHub attachment URLs, keep the original filename
+            FILENAME=$(basename "$ZIP_URL")
+            RAW_URL="https://github.com/1311-hack1/Extension-Store/files/$(echo "$ZIP_URL" | grep -o '/files/[0-9]\+/' | grep -o '[0-9]\+')/$(echo $FILENAME)"
             echo "Converting to raw URL: $RAW_URL"
             wget -O package.zip "$RAW_URL"
           fi
@@ -102,12 +102,25 @@ jobs:
             cd artifact
           fi
           
-          # Check for files
-          CRX_FILE=$(find . -name "*.crx" -o -name "build.crx" | head -n 1)
-          ICON_FILE=$(find . -name "icon*.png" -o -name "*.png" | head -n 1)
+          # Check for files with more flexible patterns
+          CRX_FILE=$(find . -type f -name "*.crx" | head -n 1)
+          if [ -z "$CRX_FILE" ]; then
+            echo "Looking for alternative CRX file..."
+            CRX_FILE=$(find . -type f -name "build.crx" -o -name "extension.crx" | head -n 1)
+          fi
+          
+          ICON_FILE=$(find . -type f -name "icon*.png" | head -n 1)
+          if [ -z "$ICON_FILE" ]; then
+            echo "Looking for alternative icon file..."
+            ICON_FILE=$(find . -type f -name "*.png" | head -n 1)
+          fi
           
           if [ -z "$CRX_FILE" ] || [ -z "$ICON_FILE" ]; then
-            echo "Missing required files (.crx file and icon)"
+            echo "Missing required files"
+            echo "CRX file found: $CRX_FILE"
+            echo "Icon file found: $ICON_FILE"
+            echo "Directory contents:"
+            ls -R
             exit 1
           fi
           
