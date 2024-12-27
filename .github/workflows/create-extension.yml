@@ -34,11 +34,14 @@ jobs:
               if (line.startsWith('**Description:**')) extension.description = line.replace('**Description:**', '').trim();
               if (line.startsWith('**Version:**')) extension.version = line.replace('**Version:**', '').trim();
               if (line.startsWith('**Author:**')) extension.author = line.replace('**Author:**', '').trim();
-              if (line.startsWith('**Tags:**')) extension.tags = line.replace('**Tags:**', '').trim();
+              if (line.startsWith('**Tags**')) {
+                const tagsStr = line.replace('**Tags**', '').replace('(comma-separated):', '').trim();
+                extension.tags = tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag);
+              }
             });
 
             // Debug logs
-            console.log('Issue body:', body);
+            console.log('Parsed extension data:', extension);
             
             // Find ZIP attachment with multiple possible patterns
             const attachmentPatterns = [
@@ -52,25 +55,6 @@ jobs:
               attachments.push(...matches);
             });
             
-            console.log('Found attachments in body:', attachments);
-            
-            // Check comments for attachments too
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number
-            });
-            
-            comments.data.forEach(comment => {
-              attachmentPatterns.forEach(pattern => {
-                const matches = comment.body.match(pattern) || [];
-                attachments.push(...matches);
-              });
-              console.log('Found attachments in comment:', comment.body);
-            });
-
-            console.log('All attachments found:', attachments);
-
             // Extract file ID from GitHub attachment URL
             const zipFile = attachments[0];
             if (!zipFile) {
@@ -86,7 +70,7 @@ jobs:
             }
 
             extension.zip_url = downloadUrl;
-            console.log('Final download URL:', downloadUrl);
+            console.log('Final extension data:', extension);
             return extension;
 
       - name: Download and Process ZIP
