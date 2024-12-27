@@ -68,6 +68,8 @@ jobs:
             return extension;
 
       - name: Download and Process ZIP
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create temp directory
           mkdir -p temp
@@ -75,45 +77,65 @@ jobs:
           
           # Download and extract ZIP
           ZIP_URL="${{ fromJSON(steps.parse.outputs.result).zip_url }}"
-          echo "Downloading from: $ZIP_URL"
+          echo "Original ZIP URL: $ZIP_URL"
           
           if [[ "$ZIP_URL" == *"user-images.githubusercontent.com"* ]]; then
             # Direct download for user-images URLs
-            wget -O package.zip "$ZIP_URL"
+            curl -L -o package.zip "$ZIP_URL"
           else
             # For GitHub attachment URLs
             FILE_ID=$(echo "$ZIP_URL" | grep -o '/files/[0-9]\+/' | grep -o '[0-9]\+')
-            FILENAME=$(basename "$ZIP_URL")
-            # Use the GitHub API to get the actual download URL
-            RAW_URL=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" | \
-              jq -r ".[] | select(.body | contains(\"$FILENAME\")) | .body" | \
-              grep -o 'https://[^)]*\.zip')
+            echo "File ID: $FILE_ID"
             
-            echo "Extracted download URL: $RAW_URL"
-            if [ -z "$RAW_URL" ]; then
-              echo "Failed to get download URL. Using direct URL..."
-              RAW_URL="$ZIP_URL"
+            # Get the download URL using GitHub API
+            DOWNLOAD_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" | \
+              jq -r --arg file_id "$FILE_ID" '.[] | 
+                select(.body | contains($file_id)) | 
+                capture("(?<url>https://github\\.com/[^)]+\\.zip)") | 
+                .url')
+            
+            echo "Download URL from API: $DOWNLOAD_URL"
+            
+            if [ -z "$DOWNLOAD_URL" ]; then
+              echo "Failed to get download URL from API, trying alternative method..."
+              # Try to get the download URL from the issue body
+              DOWNLOAD_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}" | \
+                jq -r --arg file_id "$FILE_ID" '.body | 
+                  capture("(?<url>https://github\\.com/[^)]+\\.zip)") | 
+                  .url')
             fi
             
-            echo "Downloading from: $RAW_URL"
-            wget --no-check-certificate -O package.zip "$RAW_URL"
+            if [ -z "$DOWNLOAD_URL" ]; then
+              echo "Still no download URL, using original URL..."
+              DOWNLOAD_URL="$ZIP_URL"
+            fi
+            
+            echo "Final download URL: $DOWNLOAD_URL"
+            
+            # Download the file using curl with authentication
+            curl -L -H "Authorization: token $GITHUB_TOKEN" \
+              -H "Accept: application/octet-stream" \
+              -o package.zip "$DOWNLOAD_URL"
           fi
           
           # Check if download was successful
           if [ ! -f package.zip ]; then
             echo "Failed to download ZIP file"
-            echo "Attempted URL: $RAW_URL"
-            echo "File ID: $FILE_ID"
-            echo "Filename: $FILENAME"
             exit 1
           fi
           
+          echo "Download successful. File size:"
+          ls -lh package.zip
+          
           # Extract and process
+          echo "Extracting ZIP file..."
           unzip -v package.zip
           unzip package.zip
           
-          # Show directory contents for debugging
           echo "Current directory contents:"
           ls -la
           
