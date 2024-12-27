@@ -14,7 +14,8 @@ function App() {
     try {
       const response = await fetch('https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions.json', {
         headers: {
-          'Accept': 'application/vnd.github.v3+json'
+          'Accept': 'application/vnd.github.v3.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28'
         }
       });
       
@@ -22,9 +23,7 @@ function App() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const fileData = await response.json();
-      const content = atob(fileData.content);
-      const data = JSON.parse(content);
+      const data = await response.json();
       
       if (!data || !data.extensions) {
         throw new Error('Invalid data format');
