@@ -44,16 +44,25 @@ jobs:
               issue_number: context.payload.issue.number
             });
 
-            // Find ZIP attachment
-            const attachments = [...body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || []];
+            // Debug logs
+            console.log('Issue body:', body);
+            
+            // Find ZIP attachment with broader file pattern
+            const attachments = [...body.match(/https:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || []];
+            console.log('Found attachments in body:', attachments);
+            
             comments.data.forEach(comment => {
-              const urls = comment.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || [];
+              const urls = comment.body.match(/https:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || [];
+              console.log('Found attachments in comment:', urls);
               attachments.push(...urls);
             });
 
-            const zipFile = attachments[0];
+            console.log('All attachments found:', attachments);
+
+            const zipFile = attachments.find(url => url.toLowerCase().endsWith('.zip'));
             if (!zipFile) {
-              throw new Error('Missing required ZIP file containing .crx and icon');
+              console.log('No ZIP file found in attachments');
+              throw new Error('Missing required ZIP file containing .crx and icon. Please attach a ZIP file containing your extension.crx and icon.png files.');
             }
 
             extension.zip_url = zipFile;
