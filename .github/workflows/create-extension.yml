@@ -99,18 +99,28 @@ jobs:
           wget -O package.zip "${{ fromJSON(steps.parse.outputs.result).zip_url }}"
           unzip package.zip
           
-          # Verify contents
-          if [ ! -f extension.crx ] || [ ! -f icon.png ]; then
-            echo "ZIP must contain extension.crx and icon.png"
+          # Handle different possible file structures
+          if [ -d "artifact" ]; then
+            cd artifact
+          fi
+          
+          # Check for files with different possible names
+          CRX_FILE=$(find . -name "*.crx" -o -name "build.crx" | head -n 1)
+          ICON_FILE=$(find . -name "icon*.png" -o -name "*.png" | head -n 1)
+          
+          if [ -z "$CRX_FILE" ] || [ -z "$ICON_FILE" ]; then
+            echo "Missing required files (.crx file and icon)"
             exit 1
           fi
           
-          # Move files to final location
+          # Move files to final location with correct names
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
-          mkdir -p "../extensions/${SAFE_NAME}"
-          mv extension.crx "../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
-          mv icon.png "../extensions/${SAFE_NAME}/icon.png"
-          cd ..
+          mkdir -p "../../extensions/${SAFE_NAME}"
+          cp "$CRX_FILE" "../../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          cp "$ICON_FILE" "../../extensions/${SAFE_NAME}/icon.png"
+          
+          # Clean up
+          cd ../..
           rm -rf temp
 
       - name: Update Extensions JSON
