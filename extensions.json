@@ -47,6 +47,22 @@
       ],
       "created_at": "2024-12-27T11:23:33Z",
       "updated_at": "2024-12-27T11:23:33Z"
+    },
+    {
+      "id": "4",
+      "name": "Rise Of Gamers",
+      "description": "This is Arts Test Extension",
+      "version": "1.2.4",
+      "author": "RiseOfGamers",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/rise-of-gamers/rise-of-gamers.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/rise-of-gamers/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/rise-of-gamers",
+      "tags": [
+        "Game",
+        "art"
+      ],
+      "created_at": "2024-12-27T11:23:52Z",
+      "updated_at": "2024-12-27T11:23:52Z"
     }
   ]
 }
