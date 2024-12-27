@@ -129,7 +129,7 @@ jobs:
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
           # Generate URLs based on our repository and new directory structure
-          DOWNLOAD_URL="https://github.com/${{ github.repository }}/blob/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/raw/refs/heads/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
           ICON_URL="https://github.com/${{ github.repository }}/blob/main/extensions/${SAFE_NAME}/icon.png"
           GITHUB_URL="https://github.com/${{ github.repository }}/blob/main/extensions/${SAFE_NAME}/"
 
