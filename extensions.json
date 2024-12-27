@@ -32,6 +32,21 @@
       ],
       "created_at": "2024-12-27T11:23:12Z",
       "updated_at": "2024-12-27T11:23:12Z"
+    },
+    {
+      "id": "3",
+      "name": "ext-store",
+      "description": "ext store",
+      "version": "ext store XD",
+      "author": "ext store",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/ext-store/ext-store.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/ext-store/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/ext-store",
+      "tags": [
+        "ext store"
+      ],
+      "created_at": "2024-12-27T11:23:33Z",
+      "updated_at": "2024-12-27T11:23:33Z"
     }
   ]
 }
