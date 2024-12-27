@@ -92,20 +92,14 @@ jobs:
           echo "Extension name: $EXTENSION_NAME"
           echo "Safe name for directory: $SAFE_NAME"
           
-          # Create extension directory early
-          mkdir -p "../extensions/${SAFE_NAME}"
-          echo "Created directory: ../extensions/${SAFE_NAME}"
-          
-          # Download and extract ZIP
+          # Download ZIP with new name
           ZIP_URL="${{ fromJSON(steps.parse.outputs.result).zip_url }}"
           echo "Original ZIP URL: $ZIP_URL"
           
           if [[ "$ZIP_URL" == *"user-images.githubusercontent.com"* ]]; then
-            curl -L -o package.zip "$ZIP_URL"
+            curl -L -o "${SAFE_NAME}.zip" "$ZIP_URL"
           else
             FILE_ID=$(echo "$ZIP_URL" | grep -o '/files/[0-9]\+/' | grep -o '[0-9]\+')
-            echo "File ID: $FILE_ID"
-            
             DOWNLOAD_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" | \
@@ -114,93 +108,58 @@ jobs:
                 capture("(?<url>https://github\\.com/[^)]+\\.zip)") | 
                 .url')
             
-            echo "Download URL from API: $DOWNLOAD_URL"
-            
-            if [ -z "$DOWNLOAD_URL" ]; then
-              DOWNLOAD_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-                -H "Accept: application/vnd.github.v3+json" \
-                "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}" | \
-                jq -r --arg file_id "$FILE_ID" '.body | 
-                  capture("(?<url>https://github\\.com/[^)]+\\.zip)") | 
-                  .url')
-            fi
-            
             if [ -z "$DOWNLOAD_URL" ]; then
               DOWNLOAD_URL="$ZIP_URL"
             fi
             
-            echo "Final download URL: $DOWNLOAD_URL"
-            
             curl -L -H "Authorization: token $GITHUB_TOKEN" \
               -H "Accept: application/octet-stream" \
-              -o package.zip "$DOWNLOAD_URL"
+              -o "${SAFE_NAME}.zip" "$DOWNLOAD_URL"
           fi
           
-          if [ ! -f package.zip ]; then
-            echo "Failed to download ZIP file"
-            exit 1
-          fi
+          # Extract ZIP
+          unzip "${SAFE_NAME}.zip"
           
-          echo "Download successful. File size:"
-          ls -lh package.zip
-          
-          echo "Extracting ZIP file..."
-          unzip -v package.zip
-          unzip package.zip
-          
-          echo "Current directory contents:"
-          ls -la
-          echo "Parent directory contents:"
-          ls -la ..
-          echo "Extensions directory contents:"
-          ls -la ../extensions/
-          
-          # Find extracted directory (could be any name)
+          # Find extracted directory
           EXTRACTED_DIR=$(find . -type d -mindepth 1 -maxdepth 1 | head -n 1)
           if [ -n "$EXTRACTED_DIR" ]; then
             cd "$EXTRACTED_DIR"
-            echo "Entered extracted directory: $EXTRACTED_DIR"
-            echo "Contents:"
-            ls -la
+            echo "Entered directory: $EXTRACTED_DIR"
+            
+            # Find and rename CRX file
+            CRX_FILE=$(find . -type f -name "*.crx" | head -n 1)
+            if [ -z "$CRX_FILE" ]; then
+              CRX_FILE=$(find . -type f -name "build.crx" -o -name "extension.crx" -o -name "dist.crx" | head -n 1)
+            fi
+            
+            # Find and rename icon file
+            ICON_FILE=$(find . -type f -name "icon*.png" | head -n 1)
+            if [ -z "$ICON_FILE" ]; then
+              ICON_FILE=$(find . -type f -name "*.png" | head -n 1)
+            fi
+            
+            if [ -z "$CRX_FILE" ] || [ -z "$ICON_FILE" ]; then
+              echo "Missing required files"
+              echo "CRX file found: $CRX_FILE"
+              echo "Icon file found: $ICON_FILE"
+              echo "Directory contents:"
+              find . -type f
+              exit 1
+            fi
+            
+            # Create final directory
+            mkdir -p "../../extensions/${SAFE_NAME}"
+            
+            # Copy and rename files
+            cp "$CRX_FILE" "../../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+            cp "$ICON_FILE" "../../extensions/${SAFE_NAME}/icon.png"
+            
+            echo "Files renamed and copied successfully:"
+            ls -la "../../extensions/${SAFE_NAME}/"
           fi
-          
-          # Check for files with more flexible patterns
-          CRX_FILE=$(find . -type f -name "*.crx" | head -n 1)
-          if [ -z "$CRX_FILE" ]; then
-            echo "Looking for alternative CRX file..."
-            CRX_FILE=$(find . -type f -name "build.crx" -o -name "extension.crx" | head -n 1)
-          fi
-          
-          ICON_FILE=$(find . -type f -name "icon*.png" | head -n 1)
-          if [ -z "$ICON_FILE" ]; then
-            echo "Looking for alternative icon file..."
-            ICON_FILE=$(find . -type f -name "*.png" | head -n 1)
-          fi
-          
-          if [ -z "$CRX_FILE" ] || [ -z "$ICON_FILE" ]; then
-            echo "Missing required files"
-            echo "CRX file found: $CRX_FILE"
-            echo "Icon file found: $ICON_FILE"
-            echo "Directory contents:"
-            find . -type f
-            exit 1
-          fi
-          
-          echo "Found files:"
-          echo "CRX: $CRX_FILE"
-          echo "Icon: $ICON_FILE"
-          
-          # Copy files to final location
-          echo "Copying files to: ../extensions/${SAFE_NAME}/"
-          cp "$CRX_FILE" "../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
-          cp "$ICON_FILE" "../extensions/${SAFE_NAME}/icon.png"
-          
-          # Verify files were copied
-          echo "Final extension directory contents:"
-          ls -la "../extensions/${SAFE_NAME}/"
           
           # Clean up
-          cd ..
+          cd ../..
           rm -rf temp
 
       - name: Update Extensions JSON
