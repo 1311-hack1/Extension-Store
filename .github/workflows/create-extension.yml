@@ -34,9 +34,13 @@ jobs:
               if (line.startsWith('**Description:**')) extension.description = line.replace('**Description:**', '').trim();
               if (line.startsWith('**Version:**')) extension.version = line.replace('**Version:**', '').trim();
               if (line.startsWith('**Author:**')) extension.author = line.replace('**Author:**', '').trim();
-              if (line.startsWith('**Tags**')) {
-                const tagsStr = line.replace('**Tags**', '').replace('(comma-separated):', '').trim();
-                extension.tags = tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag);
+              if (line.toLowerCase().includes('tags') && line.includes('comma-separated')) {
+                const tagsMatch = line.match(/:(.*)/);
+                if (tagsMatch) {
+                  const tagsStr = tagsMatch[1].trim();
+                  extension.tags = tagsStr.split(',').map(tag => tag.trim()).filter(tag => tag);
+                  console.log('Found tags:', extension.tags);
+                }
               }
             });
 
