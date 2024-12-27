@@ -40,14 +40,12 @@ function ExtensionCard({ extension }) {
           >
             Download
           </button>
-          <a 
-            href={extension.github_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => window.open(extension.github_url, '_blank')}
             className="text-gray-600 hover:text-gray-800 px-4 py-2 rounded text-sm font-medium border border-gray-200 hover:border-gray-300 transition-colors"
           >
             View Source
-          </a>
+          </button>
         </div>
       </div>
     </div>
