@@ -131,6 +131,9 @@ jobs:
             echo '{"extensions": []}' > extensions.json
           fi
 
+          # Convert tags array to JSON string
+          TAGS_JSON=$(echo '${{ toJSON(fromJSON(steps.parse.outputs.result).tags) }}')
+
           jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
              --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
              --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \
@@ -138,7 +141,7 @@ jobs:
              --arg download "$DOWNLOAD_URL" \
              --arg icon "$ICON_URL" \
              --arg github "$GITHUB_URL" \
-             --arg tags "${{ fromJSON(steps.parse.outputs.result).tags }}" \
+             --argjson tags "$TAGS_JSON" \
              '.extensions += [{
                 "id": ((.extensions | length) + 1 | tostring),
                 "name": $name,
@@ -148,7 +151,7 @@ jobs:
                 "download_url": $download,
                 "icon_url": $icon,
                 "github_url": $github,
-                "tags": ($tags | split(",") | map(gsub("^\\s+|\\s+$"; ""))),
+                "tags": $tags,
                 "created_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
                 "updated_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
               }]' extensions.json > temp.json && mv temp.json extensions.json
