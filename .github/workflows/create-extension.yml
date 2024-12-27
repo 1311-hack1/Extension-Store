@@ -44,9 +44,6 @@ jobs:
               }
             });
 
-            // Debug logs
-            console.log('Parsed extension data:', extension);
-            
             // Find ZIP attachment
             const attachmentPatterns = [
               /https:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g,
@@ -65,13 +62,9 @@ jobs:
               throw new Error('Missing required ZIP file containing .crx and icon.');
             }
 
-            let downloadUrl = zipFile;
-            if (zipFile.includes('github.com')) {
-              const fileId = zipFile.match(/\/files\/(\d+)\//)[1];
-              downloadUrl = `https://github.com/user-attachments/files/${fileId}/artifact.zip`;
-            }
-
-            extension.zip_url = downloadUrl;
+            // Keep the original URL for GitHub-uploaded files
+            extension.zip_url = zipFile;
+            console.log('ZIP URL:', extension.zip_url);
             return extension;
 
       - name: Download and Process ZIP
@@ -81,7 +74,27 @@ jobs:
           cd temp
           
           # Download and extract ZIP
-          wget -O package.zip "${{ fromJSON(steps.parse.outputs.result).zip_url }}"
+          ZIP_URL="${{ fromJSON(steps.parse.outputs.result).zip_url }}"
+          echo "Downloading from: $ZIP_URL"
+          
+          if [[ "$ZIP_URL" == *"user-images.githubusercontent.com"* ]]; then
+            # Direct download for user-images URLs
+            wget -O package.zip "$ZIP_URL"
+          else
+            # For GitHub attachment URLs, use the raw download URL
+            FILE_ID=$(echo "$ZIP_URL" | grep -o '/files/[0-9]\+/' | grep -o '[0-9]\+')
+            RAW_URL="https://github.com/1311-hack1/Extension-Store/files/$FILE_ID/artifact.zip"
+            echo "Converting to raw URL: $RAW_URL"
+            wget -O package.zip "$RAW_URL"
+          fi
+          
+          # Check if download was successful
+          if [ ! -f package.zip ]; then
+            echo "Failed to download ZIP file"
+            exit 1
+          fi
+          
+          # Extract and process
           unzip package.zip
           
           # Handle different possible file structures
