@@ -37,46 +37,44 @@ jobs:
               if (line.startsWith('**Tags:**')) extension.tags = line.replace('**Tags:**', '').trim();
             });
 
-            // Get issue comments to find attachments
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue.number
-            });
-
-            // Find .crx and image attachments
-            const attachments = [...context.payload.issue.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || []];
+            // Find ZIP attachment
+            const attachments = [...context.payload.issue.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || []];
             comments.data.forEach(comment => {
-              const urls = comment.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || [];
+              const urls = comment.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g) || [];
               attachments.push(...urls);
             });
 
-            const crxFile = attachments.find(url => url.endsWith('.crx'));
-            const iconFile = attachments.find(url => url.match(/\.(png|jpg|jpeg|gif)$/i));
-
-            if (!crxFile || !iconFile) {
-              throw new Error('Missing required attachments (.crx file and icon)');
+            const zipFile = attachments[0];
+            if (!zipFile) {
+              throw new Error('Missing required ZIP file containing .crx and icon');
             }
 
-            extension.crx_url = crxFile;
-            extension.icon_url = iconFile;
-
+            extension.zip_url = zipFile;
             return extension;
 
-      - name: Download and Store Files
+      - name: Download and Process ZIP
         run: |
-          # Create base extensions directory
-          mkdir -p extensions
+          # Create temp directory
+          mkdir -p temp
+          cd temp
           
-          # Create safe directory name (replace spaces and special chars with dashes)
+          # Download and extract ZIP
+          wget -O package.zip "${{ fromJSON(steps.parse.outputs.result).zip_url }}"
+          unzip package.zip
+          
+          # Verify contents
+          if [ ! -f extension.crx ] || [ ! -f icon.png ]; then
+            echo "ZIP must contain extension.crx and icon.png"
+            exit 1
+          fi
+          
+          # Move files to final location
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
-          
-          # Create directory for this extension
-          mkdir -p "extensions/${SAFE_NAME}"
-          
-          # Download files into extension-specific directory
-          wget -O "extensions/${SAFE_NAME}/${SAFE_NAME}.crx" "${{ fromJSON(steps.parse.outputs.result).crx_url }}"
-          wget -O "extensions/${SAFE_NAME}/icon.png" "${{ fromJSON(steps.parse.outputs.result).icon_url }}"
+          mkdir -p "../extensions/${SAFE_NAME}"
+          mv extension.crx "../extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          mv icon.png "../extensions/${SAFE_NAME}/icon.png"
+          cd ..
+          rm -rf temp
 
       - name: Update Extensions JSON
         run: |
