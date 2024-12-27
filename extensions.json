@@ -1,0 +1,20 @@
+{
+  "extensions": [
+    {
+      "id": "1",
+      "name": "Artifact",
+      "description": "Discover exclusive rewards exclusively for Wootzapp users.",
+      "version": "0.0.1",
+      "author": "Wootzapp Team",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/artifact/artifact.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/artifact/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/artifact",
+      "tags": [
+        "Rewards",
+        "earn"
+      ],
+      "created_at": "2024-12-27T11:06:47Z",
+      "updated_at": "2024-12-27T11:06:47Z"
+    }
+  ]
+}
