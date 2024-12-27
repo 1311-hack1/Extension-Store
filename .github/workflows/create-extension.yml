@@ -128,17 +128,21 @@ jobs:
           # Generate safe name for URLs
           SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
-          # Generate correct raw URLs for GitHub
-          DOWNLOAD_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
-          ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/icon.png"
-          GITHUB_URL="https://github.com/${{ github.repository }}/tree/main/extensions/${SAFE_NAME}"
+          # Generate URLs using GitHub API format
+          REPO="${{ github.repository }}"
+          BRANCH="main"
+          PATH_PREFIX="extensions/${SAFE_NAME}"
+          
+          # Generate API URLs for assets
+          DOWNLOAD_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/${SAFE_NAME}.crx?ref=${BRANCH}"
+          ICON_URL="https://api.github.com/repos/${REPO}/contents/${PATH_PREFIX}/icon.png?ref=${BRANCH}"
+          GITHUB_URL="https://github.com/${REPO}/tree/${BRANCH}/${PATH_PREFIX}"
 
           # Initialize extensions.json if it doesn't exist
           if [ ! -f extensions.json ]; then
             echo '{"extensions": []}' > extensions.json
           fi
 
-          # Process tags: split by comma, remove whitespace
           jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
              --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
              --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \

@@ -1,17 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 function ExtensionCard({ extension }) {
+  const [iconUrl, setIconUrl] = useState(null);
+  const [downloadUrl, setDownloadUrl] = useState(null);
+
+  useEffect(() => {
+    // Fetch actual URLs from GitHub API
+    const fetchUrls = async () => {
+      try {
+        // Fetch icon URL
+        const iconResponse = await fetch(extension.icon_url, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        const iconData = await iconResponse.json();
+        setIconUrl(iconData.download_url);
+
+        // Fetch download URL
+        const downloadResponse = await fetch(extension.download_url, {
+          headers: {
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        const downloadData = await downloadResponse.json();
+        setDownloadUrl(downloadData.download_url);
+      } catch (error) {
+        console.error('Error fetching URLs:', error);
+      }
+    };
+
+    fetchUrls();
+  }, [extension.icon_url, extension.download_url]);
+
   const handleDownload = () => {
-    chrome.downloads.download({
-      url: extension.download_url,
-      filename: `${extension.name}-${extension.version}.crx`
-    });
+    if (downloadUrl) {
+      chrome.downloads.download({
+        url: downloadUrl,
+        filename: `${extension.name}-${extension.version}.crx`
+      });
+    }
   };
 
   return (
     <div className="flex p-3 border border-gray-200 rounded-lg gap-3 hover:shadow-md transition-shadow">
       <img 
-        src={extension.icon} 
+        src={iconUrl || 'placeholder.png'} 
         alt={extension.name} 
         className="w-12 h-12 object-cover rounded"
       />
@@ -36,7 +70,12 @@ function ExtensionCard({ extension }) {
         <div className="flex gap-2">
           <button 
             onClick={handleDownload}
-            className="bg-green-500 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-600 transition-colors"
+            disabled={!downloadUrl}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              downloadUrl 
+                ? 'bg-green-500 text-white hover:bg-green-600' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             Download
           </button>

@@ -11,9 +11,9 @@
     "downloads"
   ],
   "host_permissions": [
-    "https://raw.githubusercontent.com/*"
+    "https://api.github.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://raw.githubusercontent.com;"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src https://api.github.com/"
   }
 } 
