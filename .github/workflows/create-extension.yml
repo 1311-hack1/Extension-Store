@@ -37,35 +37,56 @@ jobs:
               if (line.startsWith('**Tags:**')) extension.tags = line.replace('**Tags:**', '').trim();
             });
 
-            // Get comments from the issue
+            // Debug logs
+            console.log('Issue body:', body);
+            
+            // Find ZIP attachment with multiple possible patterns
+            const attachmentPatterns = [
+              /https:\/\/user-images\.githubusercontent\.com\/[^\s)]+\.zip/g,
+              /https:\/\/github\.com\/[^\s)]+\/files\/[^\s)]+\.zip/g
+            ];
+            
+            let attachments = [];
+            attachmentPatterns.forEach(pattern => {
+              const matches = body.match(pattern) || [];
+              attachments.push(...matches);
+            });
+            
+            console.log('Found attachments in body:', attachments);
+            
+            // Check comments for attachments too
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.issue.number
             });
-
-            // Debug logs
-            console.log('Issue body:', body);
-            
-            // Find ZIP attachment with broader file pattern
-            const attachments = [...body.match(/https:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || []];
-            console.log('Found attachments in body:', attachments);
             
             comments.data.forEach(comment => {
-              const urls = comment.body.match(/https:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || [];
-              console.log('Found attachments in comment:', urls);
-              attachments.push(...urls);
+              attachmentPatterns.forEach(pattern => {
+                const matches = comment.body.match(pattern) || [];
+                attachments.push(...matches);
+              });
+              console.log('Found attachments in comment:', comment.body);
             });
 
             console.log('All attachments found:', attachments);
 
-            const zipFile = attachments.find(url => url.toLowerCase().endsWith('.zip'));
+            // Extract file ID from GitHub attachment URL
+            const zipFile = attachments[0];
             if (!zipFile) {
               console.log('No ZIP file found in attachments');
               throw new Error('Missing required ZIP file containing .crx and icon. Please attach a ZIP file containing your extension.crx and icon.png files.');
             }
 
-            extension.zip_url = zipFile;
+            // Convert GitHub attachment URL to raw download URL if needed
+            let downloadUrl = zipFile;
+            if (zipFile.includes('github.com')) {
+              const fileId = zipFile.match(/\/files\/(\d+)\//)[1];
+              downloadUrl = `https://github.com/user-attachments/files/${fileId}/artifact.zip`;
+            }
+
+            extension.zip_url = downloadUrl;
+            console.log('Final download URL:', downloadUrl);
             return extension;
 
       - name: Download and Process ZIP
