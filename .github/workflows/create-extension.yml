@@ -133,6 +133,11 @@ jobs:
           ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/icon.png"
           GITHUB_URL="https://github.com/${{ github.repository }}"
 
+          # Initialize extensions.json if it doesn't exist
+          if [ ! -f extensions.json ]; then
+            echo '{"extensions": []}' > extensions.json
+          fi
+
           jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
              --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
              --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \
@@ -150,9 +155,9 @@ jobs:
                 "download_url": $download,
                 "icon_url": $icon,
                 "github_url": $github,
-                "tags": ($tags | split(",") | map(trim)),
-                "created_at": (now | todate),
-                "updated_at": (now | todate)
+                "tags": ($tags | split(",") | map(. | trim)),
+                "created_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ")),
+                "updated_at": (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
               }]' extensions.json > temp.json && mv temp.json extensions.json
 
       - name: Commit and Push Changes
