@@ -67,6 +67,11 @@ jobs:
             console.log('ZIP URL:', extension.zip_url);
             return extension;
 
+      - name: Create Directory Structure
+        run: |
+          mkdir -p extensions
+          touch extensions/.gitkeep
+
       - name: Download and Process ZIP
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -252,10 +257,21 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add extensions/
-          git add extensions.json
-          git commit -m "Update extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
-          git push
+          
+          # Create directories if they don't exist
+          mkdir -p extensions
+          
+          # Stage all changes
+          git add -f extensions/
+          git add -f extensions.json
+          
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
+            git push
+          fi
 
       - name: Comment on Issue
         uses: actions/github-script@v6
