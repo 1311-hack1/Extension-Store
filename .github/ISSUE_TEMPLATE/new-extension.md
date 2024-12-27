@@ -15,8 +15,8 @@ Please fill out the following information:
 
 **Author:** 
 
-**Icon URL:** 
-
 **Tags** (comma-separated): 
 
 **Additional Information:** 
+
+<!-- Please upload your .crx file and icon image (128x128 px) as attachments to this issue --> 

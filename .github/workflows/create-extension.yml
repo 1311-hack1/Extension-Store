@@ -8,6 +8,9 @@ jobs:
   process-extension:
     if: contains(github.event.issue.labels.*.name, 'new-extension')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v3
 
@@ -16,43 +19,93 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Parse Issue Body
+      - name: Parse Issue and Download Files
         id: parse
         uses: actions/github-script@v6
         with:
           script: |
             const body = context.payload.issue.body;
-            // Parse the issue body to extract extension details
             const lines = body.split('\n');
             const extension = {};
             
+            // Parse basic info
             lines.forEach(line => {
-              if (line.startsWith('Name:')) extension.name = line.replace('Name:', '').trim();
-              if (line.startsWith('Description:')) extension.description = line.replace('Description:', '').trim();
-              if (line.startsWith('Version:')) extension.version = line.replace('Version:', '').trim();
-              if (line.startsWith('Download URL:')) extension.download_url = line.replace('Download URL:', '').trim();
-              // Add more fields as needed
+              if (line.startsWith('**Name:**')) extension.name = line.replace('**Name:**', '').trim();
+              if (line.startsWith('**Description:**')) extension.description = line.replace('**Description:**', '').trim();
+              if (line.startsWith('**Version:**')) extension.version = line.replace('**Version:**', '').trim();
+              if (line.startsWith('**Author:**')) extension.author = line.replace('**Author:**', '').trim();
+              if (line.startsWith('**Tags:**')) extension.tags = line.replace('**Tags:**', '').trim();
             });
+
+            // Get issue comments to find attachments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number
+            });
+
+            // Find .crx and image attachments
+            const attachments = [...context.payload.issue.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || []];
+            comments.data.forEach(comment => {
+              const urls = comment.body.match(/\bhttps:\/\/user-images\.githubusercontent\.com\/[^\s)]+/g) || [];
+              attachments.push(...urls);
+            });
+
+            const crxFile = attachments.find(url => url.endsWith('.crx'));
+            const iconFile = attachments.find(url => url.match(/\.(png|jpg|jpeg|gif)$/i));
+
+            if (!crxFile || !iconFile) {
+              throw new Error('Missing required attachments (.crx file and icon)');
+            }
+
+            extension.crx_url = crxFile;
+            extension.icon_url = iconFile;
 
             return extension;
 
+      - name: Download and Store Files
+        run: |
+          # Create base extensions directory
+          mkdir -p extensions
+          
+          # Create safe directory name (replace spaces and special chars with dashes)
+          SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
+          
+          # Create directory for this extension
+          mkdir -p "extensions/${SAFE_NAME}"
+          
+          # Download files into extension-specific directory
+          wget -O "extensions/${SAFE_NAME}/${SAFE_NAME}.crx" "${{ fromJSON(steps.parse.outputs.result).crx_url }}"
+          wget -O "extensions/${SAFE_NAME}/icon.png" "${{ fromJSON(steps.parse.outputs.result).icon_url }}"
+
       - name: Update Extensions JSON
         run: |
-          # Read current extensions.json
-          content=$(cat extensions.json)
+          # Generate safe name for URLs
+          SAFE_NAME=$(echo "${{ fromJSON(steps.parse.outputs.result).name }}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9-]/-/g')
           
-          # Add new extension to the JSON
-          # Using jq to modify the JSON file
+          # Generate URLs based on our repository and new directory structure
+          DOWNLOAD_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/${SAFE_NAME}.crx"
+          ICON_URL="https://raw.githubusercontent.com/${{ github.repository }}/main/extensions/${SAFE_NAME}/icon.png"
+          GITHUB_URL="https://github.com/${{ github.repository }}"
+
           jq --arg name "${{ fromJSON(steps.parse.outputs.result).name }}" \
              --arg desc "${{ fromJSON(steps.parse.outputs.result).description }}" \
              --arg ver "${{ fromJSON(steps.parse.outputs.result).version }}" \
-             --arg url "${{ fromJSON(steps.parse.outputs.result).download_url }}" \
+             --arg author "${{ fromJSON(steps.parse.outputs.result).author }}" \
+             --arg download "$DOWNLOAD_URL" \
+             --arg icon "$ICON_URL" \
+             --arg github "$GITHUB_URL" \
+             --arg tags "${{ fromJSON(steps.parse.outputs.result).tags }}" \
              '.extensions += [{
                 "id": ((.extensions | length) + 1 | tostring),
                 "name": $name,
                 "description": $desc,
                 "version": $ver,
-                "download_url": $url,
+                "author": $author,
+                "download_url": $download,
+                "icon_url": $icon,
+                "github_url": $github,
+                "tags": ($tags | split(",") | map(trim)),
                 "created_at": (now | todate),
                 "updated_at": (now | todate)
               }]' extensions.json > temp.json && mv temp.json extensions.json
@@ -61,6 +114,18 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git add extensions/
           git add extensions.json
           git commit -m "Add new extension: ${{ fromJSON(steps.parse.outputs.result).name }}"
-          git push 
+          git push
+
+      - name: Comment on Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `Extension has been successfully added!\n\nDownload URL: ${process.env.DOWNLOAD_URL}\nIcon URL: ${process.env.ICON_URL}\nGitHub URL: ${process.env.GITHUB_URL}`
+            }); 
