@@ -109,6 +109,22 @@
       ],
       "created_at": "2024-12-27T11:25:25Z",
       "updated_at": "2024-12-27T11:25:25Z"
+    },
+    {
+      "id": "8",
+      "name": "Sagar",
+      "description": "blah",
+      "version": "1.020.2",
+      "author": "sagar",
+      "download_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/sagar/sagar.crx",
+      "icon_url": "https://api.github.com/repos/1311-hack1/Extension-Store/contents/extensions/sagar/icon.png",
+      "github_url": "https://github.com/1311-hack1/Extension-Store/tree/main/extensions/sagar",
+      "tags": [
+        "test",
+        "write"
+      ],
+      "created_at": "2025-05-15T06:08:32Z",
+      "updated_at": "2025-05-15T06:08:32Z"
     }
   ]
 }
